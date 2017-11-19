@@ -11,7 +11,7 @@ extern "C" {
 	#include <unistd.h>
 }
 
-int run(int width, int height, int dpi, std::string fbdev, std::string tsdev, bool password);
+int run(int width, int height, int dpi, std::string fbdev, std::string tsdev, std::string prompt, bool password);
 
 int main(int argc, char** argv) {
 
@@ -23,13 +23,17 @@ int main(int argc, char** argv) {
 	int dpi = 0;
 	char* tsdev = "";
 	char* fbdev = "";
+	char* prompt = "";
 	bool password = false;
 
-	while ((c = getopt (argc, argv, "w:h:d:t:f:p")) != -1)
+	while ((c = getopt (argc, argv, "w:h:d:t:f:pP:")) != -1)
 	switch (c)
 	{
 		case 'p':
 			password = true;
+			break;
+		case 'P':
+			prompt = optarg;
 			break;
 		case 'f':
 			fbdev = optarg;
@@ -60,15 +64,15 @@ int main(int argc, char** argv) {
 
 	std::cout << width << height << dpi << tsdev << fbdev << std::endl;
 
-	return run(width, height, dpi, std::string(fbdev), std::string(tsdev), password);
+	return run(width, height, dpi, std::string(fbdev), std::string(tsdev), std::string(prompt), password);
 }
 
-int run(int width, int height, int dpi, std::string fbdev, std::string tsdev, bool password) {
+int run(int width, int height, int dpi, std::string fbdev, std::string tsdev, std::string prompt, bool password) {
 
 	std::string kbfile = "tst.ppm";
 
   	Display screen(width, height, dpi);
-  	screen.setString("**Enter password**");
+  	screen.setString(prompt);
   	screen.refresh();
   	screen.write("out.ppm");
   	system((std::string("fbsplash -s out.ppm -d ") + fbdev).c_str());

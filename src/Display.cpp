@@ -8,6 +8,8 @@ Display::Display(int width, int height, int dpi) : width{width}, height{height},
 	keyboardImage->h = height;
 	keyboardImage->data = new RGB[width*height];
 
+	//Initialize background to grey.
+	//Doing not-grey would be much slower.
 	memset((unsigned char*) keyboardImage->data, 0x70, width*height*3);
 
 	margin = width / 33;
@@ -21,8 +23,15 @@ Display::Display(int width, int height, int dpi) : width{width}, height{height},
 
 	stepSizePx = (height-(2*margin) - (11*8*scale))/10;
 
-	currentKeyboard = &LCkeyboard;
+	kbScale = scale-2;
 
+	if(kbScale < 0) {
+    	kbScale = 1;
+    }
+
+    maxlen = (height-(2*margin)) / ((scale*8) + 4);
+
+    currentKeyboard = &LCkeyboard;
 }
 
 Display::~Display() {
@@ -53,11 +62,8 @@ void Display::print_letter(char letter, int atX, int atY, int scale, bool invert
 	RGB black = {0x10, 0x10, 0x10};
 	for (int y=0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
-			if(font8x8_basic[letter][x] & (uint8_t)(1 << (7-(y)))) {
+			if(font8x8_basic[(uint8_t) letter][x] & (uint8_t)(1 << (7-(y)))) {
 				set_px(inverted ? black : white, atX + (x*scale), atY + (y*scale), scale);
-			}
-			else {
-				//set_px(black, x*scale, y*scale, scale, img);	
 			}
 		}
 	}
@@ -94,18 +100,18 @@ char Display::keyAt(int x, int y) {
 	if(x < entryWidth) {
 		return 0;
 	}
+
 	for(int xCheck = 1; xCheck < 5; xCheck++) {
 		//determine row of touch.
-		//TODO: extract this into a define as well.
 
-		int lastRowStart = entryWidth + (4*scale) + ((xCheck - 1)*(rowWidth));
-		int rowStart = entryWidth + (4*scale) + ((xCheck)*(rowWidth));
+		int lastRowStart = CHAR_Y_START(entryWidth, scale, xCheck - 1, rowWidth);
+		int rowStart = CHAR_Y_START(entryWidth, scale, xCheck, rowWidth);
 
 		if(x > lastRowStart && x < rowStart) {
 			//std::cout << "row: " << xCheck << std::endl;
 			for(int yCheck = 1; yCheck < 12; yCheck++) {
-				int lastCharStart = CHAR_START(margin, yCheck-1, stepSizePx, scale);
-				int thisCharStart = CHAR_START(margin, yCheck, stepSizePx, scale);
+				int lastCharStart = CHAR_X_START(margin, yCheck-1, stepSizePx, scale);
+				int thisCharStart = CHAR_X_START(margin, yCheck, stepSizePx, scale);
 				if(y > lastCharStart && y < thisCharStart) {
 					//std::cout << "col: " << yCheck << std::endl;
 					if(xCheck > 3) {
@@ -145,20 +151,20 @@ void Display::refresh() {
 
 	for (int i = 0; i < 3; i++) {
     	for (int z = 0; z < 11; z++) {
-    		print_letter((*currentKeyboard)[i][10-z], entryWidth + (4*scale) + (i*(rowWidth)), CHAR_START(margin, z, stepSizePx, scale), scale);
+    		print_letter((*currentKeyboard)[i][10-z], CHAR_Y_START(entryWidth, scale, i, rowWidth), CHAR_X_START(margin, z, stepSizePx, scale), scale);
     	}
     }
 
-    print_letter(0x01, entryWidth + (4*scale) + (3*(rowWidth)), CHAR_START(margin, 9, stepSizePx, scale), scale);
-    print_letter(0x03, entryWidth + (4*scale) + (3*(rowWidth)), CHAR_START(margin, 10, stepSizePx, scale), scale);
+    print_letter(0x01, CHAR_Y_START(entryWidth, scale, 3, rowWidth) , CHAR_X_START(margin, 9, stepSizePx, scale), scale);
+    print_letter(0x03, CHAR_Y_START(entryWidth, scale, 3, rowWidth), CHAR_X_START(margin, 10, stepSizePx, scale), scale);
 
 
     //event: 4 code 4 value: 42
     RGB color = {0xFF, 0xFF, 0xFF};
 	fastRect(0, 0, entryWidth, height, color);
 	for(int i=1; i < 11; i++) {
-		int lastCharEnd = (CHAR_START(margin, i-1, stepSizePx, scale) + (8*scale));
-		int thisCharStart = CHAR_START(margin, i, stepSizePx, scale);
+		int lastCharEnd = (CHAR_X_START(margin, i-1, stepSizePx, scale) + (8*scale));
+		int thisCharStart = CHAR_X_START(margin, i, stepSizePx, scale);
 		xLine(0, (lastCharEnd + thisCharStart) / 2 , color);
 	}
 
@@ -169,13 +175,12 @@ void Display::refresh() {
     }
     lastLine-=rowWidth*2;
 
-	int lastCharEnd = (CHAR_START(margin, 3-1, stepSizePx, scale)+(8*scale));
-	int thisCharStart = CHAR_START(margin, 3, stepSizePx, scale);
+	int lastCharEnd = (CHAR_X_START(margin, 3-1, stepSizePx, scale)+(8*scale));
+	int thisCharStart = CHAR_X_START(margin, 3, stepSizePx, scale);
 
     fastRect(lastLine, (lastCharEnd + thisCharStart) / 2, rowWidth, (stepSizePx + (8*scale))*5, color );
 
-    int kbScale = scale - 2;
-    for(int i = 0; i < currentText.length(); i++) {
+    for(uint8_t i = 0; i < currentText.length() && i < maxlen; i++) {
     	print_letter(currentText.at(i), (entryWidth/2) - ((kbScale*8)/2), height - margin - (kbScale*8) - (i*((kbScale*8) + 4)), kbScale, true);
     }
 }

@@ -7,8 +7,8 @@
 #include <string>
 #include <fstream>
 #include <ios>
-#define CHAR_START(margin, i, stepSizePx, scale) (margin + ((i)*(stepSizePx + (8*scale))) - scale)
-
+#define CHAR_X_START(margin, i, stepSizePx, scale) (margin + ((i)*(stepSizePx + (8*scale))) - scale)
+#define CHAR_Y_START(entryWidth, scale, i, rowWidth)  (entryWidth + (4*scale) + (i*(rowWidth)))
 typedef struct RGB
 {
     unsigned char r, g, b;
@@ -74,6 +74,8 @@ private:
 	int keyboardWidth;
 	int rowWidth;
 	int stepSizePx;
+    int kbScale;
+    int maxlen;
 
 	ImageRGB* keyboardImage;
 
